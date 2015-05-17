@@ -1,25 +1,142 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Peer Assessment 1"
+author: "Josh Vandenbrink"
+date: "Saturday, May 16, 2015"
+output: html_document
 ---
 
+## **Loading and preprocessing the data**
+This is how the data is loaded and processed:
 
-## Loading and preprocessing the data
+```{r}
+setwd("C:/Users/Joshua/RepData_PeerAssessment1")
+
+dat <- read.csv("activity.csv")
+
+summary(dat)
+
+```
+No further transformation of the data is necessary. 
+
+## **What is the mean total number of steps taken per day?** 
+
+
+```{r}
+
+aggedtotal <- aggregate(dat$steps, by=list(dat$date), FUN  = sum, na.rm = TRUE)
+
+```
+
+Average steps taken:
+```{r}
+mean(aggedtotal$x)
+```
+
+Median steps taken:
+```{r}
+median(aggedtotal$x)
+
+hist(aggedtotal$x, main="(Imputed) Histogram of steps per day", xlab="Total steps in a day")
+
+```
+
+
+The total number of steps taken per day is:
+
+```{r}
+
+aggedmean <- aggregate(dat$steps, by=list(dat$date), FUN = sum, na.rm = TRUE)
+
+barplot(aggedmean$x, ylab = "Count", main = "Total Steps Per Day",  space=1)
+
+```
+
+
+## **What is the average daily activity pattern?**
+
+```{r}
+aggedintervalmean <- aggregate(dat$steps, by=list(dat$interval), FUN = mean, na.rm = TRUE)
+
+plot(aggedintervalmean, type = "l", main = "Timecourse of average steps taken across all days", ylab = 
+       "number of steps", xlab = "5-minute interval")
+
+max(aggedintervalmean$x)
+
+maxname <- which.max(aggedintervalmean$x)
+
+names <- aggedintervalmean[maxname, ]
+
+names$Group.1
 
 
 
-## What is mean total number of steps taken per day?
+```
+
+The maxinum number of steps is during the **835** interval, at **206.17** steps on average. 
+
+## **Imputing missing values**
+
+Calculate the number of missing values
+```{r}
+
+totalnas <- sum(is.na(dat$steps))
+
+totalnas
+
+```
+
+
+Perform the imputation by replacing NA's with the average for that associated interval. 
+
+```{r}
+for (i in 1:nrow(dat)){
+  if (is.na(dat$steps[i])){
+    interval_val <- dat$interval[i]
+    row_id <- which(aggedintervalmean$Group.1 == interval_val)
+    steps_val <- aggedintervalmean$x [row_id]
+    dat$steps[i] <- steps_val
+  }
+}
+
+table_date_steps_imputed <- aggregate(steps ~ date, dat, sum)
+
+hist(table_date_steps_imputed$steps, main="(Imputed) Histogram of total steps per day", xlab="Total steps in a day")
+
+mean(table_date_steps_imputed$steps)
+median(table_date_steps_imputed$steps)
+
+```
+
+## **Are there differences in activity patterns between weekdays and weekends?**
 
 
 
-## What is the average daily activity pattern?
+```{r}
+
+dayofweek <- function(dat) {
+    if (weekdays(as.Date(dat)) %in% c("Saturday", "Sunday")) {
+        "weekend"
+    } else {
+        "weekday"
+    }
+}
+dat$daytype <- as.factor(sapply(dat$date, dayofweek))
 
 
-
-## Imputing missing values
-
+```
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+weekend <- subset(dat, dat$daytype == "weekend")
+weekday <- subset(dat, dat$daytype == "weekday")
+
+weekday <- aggregate(steps ~ interval, data=weekday, FUN = mean )
+plot(weekday$steps ~ weekday$interva, type = "l", main = "Weekday Steps Per Time Interval", xlab = "5 Minute Interval", ylab = "Steps Taken")
+
+weekend <- aggregate(steps ~ interval, data=weekend, FUN = mean )
+plot(weekend$steps ~ weekend$interva, type = "l", main =  "Weekend Steps Per Time Interval", xlab = "5 Minute Interval", ylab = "Steps Taken")
+
+```
+
+**Yes, there does appear to be a difference in the activitey when comparing weekends to weekdays. **
+
